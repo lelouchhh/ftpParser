@@ -7,8 +7,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
+	"time"
 )
 
 func GetFolders(client *goftp.Client, path string) []string {
@@ -23,6 +23,8 @@ func GetFolders(client *goftp.Client, path string) []string {
 	return list
 }
 
+// matching items from folder by mask pattern
+
 func MatchingFolder(list []string, pattern string) []string {
 	var outputList []string
 
@@ -31,21 +33,23 @@ func MatchingFolder(list []string, pattern string) []string {
 			outputList = append(outputList, item)
 		}
 	}
+
+	//if len(outputList) == 0 {
+	//	fmt.Println("0 files was matched")
+	//}
 	return outputList
 }
+
 func GetNextDay(s string) string {
-	num, _ := strconv.Atoi(s[6:8])
-	num++
-	if num >= 10 {
-		return s[0:6] + strconv.Itoa(num) + s[8:10]
-	} else {
-		return s[0:6] + "0" + strconv.Itoa(num) + s[8:10]
-	}
+	now, _ := time.Parse("2006010200", s)
+	tomorrow := time.Date(now.Year(), now.Month(), now.Day(), 15, 0, 0, 0, time.UTC).
+		AddDate(0, 0, 1).
+		Format("2006010200")
+	return tomorrow
 }
 
-func Extract(list []string, path, dest string) {
+func ExtractZip(list []string, path, dest string) {
 	for _, file := range list {
-
 		dst := dest + file[0:len(file)-7]
 		fmt.Println(dest)
 		archive, err := zip.OpenReader(path + file)
@@ -89,4 +93,17 @@ func Extract(list []string, path, dest string) {
 			fileInArchive.Close()
 		}
 	}
+}
+func DownloadZips(c *goftp.Client, list []string, path, output string) {
+	if len(list) == 0 {
+		return
+	}
+	for _, item := range list {
+		out, err := os.Create(output + item)
+		if err != nil {
+			fmt.Printf("err: %s", err)
+		}
+		_ = c.Retrieve(path+item, out)
+	}
+
 }
